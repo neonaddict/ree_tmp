@@ -107,9 +107,18 @@ class ReeSwagger::BuildEndpointSchema
             schema: {
               type: 'object',
               properties: {
-                code: error.code,
-                message: error.message,
-                type: error.message
+                code: {
+                  type: 'string',
+                  description: error.code,
+                },
+                message:{
+                  type: 'string',
+                  description: error.message
+                },
+                type: {
+                  type: 'string',
+                  description: error.message
+                }
               }
             }
           }
