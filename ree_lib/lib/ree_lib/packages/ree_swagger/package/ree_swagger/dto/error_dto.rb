@@ -5,5 +5,8 @@
     properties(
       status: Integer,
       description: String,
+      type: String,
+      code: String,
+      message: String
     )
   end

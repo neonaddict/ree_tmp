@@ -92,13 +92,28 @@ class ReeSwagger::BuildEndpointSchema
     }
 
     endpoint.errors.each do |error|
-      if responses.key?(error.status)
-        responses[error.status][:description] += "\n- #{error.description}"
-        next
-      end
+      # if responses.key?(error.status)
+      #   responses[error.status][:description] += "\n- #{error.description}"
+      #   next
+      # end
 
+      # responses[error.status] = {
+      #   description: "- #{error.description}",
+      # }
       responses[error.status] = {
-        description: "- #{error.description}",
+        description: error.description,
+        content: {
+          :"#{mime_type}" => {
+            schema: {
+              type: 'object',
+              properties: {
+                code: error.code,
+                message: error.message,
+                type: error.message
+              }
+            }
+          }
+        }
       }
     end
 
