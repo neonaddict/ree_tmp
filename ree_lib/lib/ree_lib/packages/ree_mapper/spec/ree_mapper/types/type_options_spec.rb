@@ -15,6 +15,142 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
     )
   }
 
+  describe 'only and except' do
+    before {
+      mapper_factory.call(register_as: :point).use(:cast) {
+        integer :x
+        integer :y
+        integer :z
+      } 
+    }
+
+    context 'with only' do
+      let(:mapper) {
+        mapper_factory.call.use(:cast) {
+          integer :id
+          integer? :opt_id
+          point :point, only: [:x, :y]
+        }
+      }
+
+      it {
+        expect(mapper.cast({ id: 1, point: { x: 1, y: 1 } })).to eq({ id: 1, point: { x: 1, y: 1 } })
+      }
+
+      it {
+        expect(mapper.cast({ opt_id: 1, point: { x: 1 } }, only: [:opt_id, point: [:x]])).to eq({ opt_id: 1, point: { x: 1 } })
+      }
+    end
+
+    context 'with except' do
+      let(:mapper) {
+        mapper_factory.call.use(:cast) {
+          integer :id
+          point :point, except: [:z]
+        }
+      }
+
+      it {
+        expect(mapper.cast({ id: 1, point: { x: 1, y: 1 } })).to eq({ id: 1, point: { x: 1, y: 1 } })
+      }
+
+      it {
+        expect(mapper.cast({ id: 1, point: { x: 1 } }, except: [:id, point: [:y]])).to eq({ point: { x: 1 } })
+      }
+    end
+
+    context 'with only and except' do
+      let(:mapper) {
+        mapper_factory.call.use(:cast) {
+          integer :included
+          integer :excluded
+          point :point, only: [:x, :y], except: [:y]
+
+          hash :matrix do
+            point :x, only: [:x]
+            point :y, except: [:x, :z]
+          end
+
+          array :points, each: point(only: [:x, :y])
+        }
+      }
+
+      it {
+        expect(mapper.cast(
+          {
+            included: 1,
+            excluded: 1,
+            point: { x: 1 },
+            matrix: { x: { x: 1 }, y: { y: 1 } },
+            points: [{ x: 1, y: 1}]
+          }
+        )).to eq(
+          {
+            included: 1,
+            excluded: 1,
+            point: { x: 1 },
+            matrix: { x: { x: 1 }, y: { y: 1 } },
+            points: [{ x: 1, y: 1 }]
+          }
+        )
+      }
+
+      it {
+        expect(mapper.cast(
+          {
+            included: 1,
+            excluded: 1,
+            point: { x: 1 },
+            matrix: { x: { x: 1 }, y: { y: 1 } },
+            points: [{ x: 1, y: 1}]
+          },
+          only: [:included, point: [:x], matrix: [x: [:x]], points: [:x]]
+        )).to eq(
+          {
+            included: 1,
+            point: { x: 1 },
+            matrix: { x: { x: 1 } },
+            points: [{ x: 1 }]
+          }
+        )
+      }
+    end
+
+    context 'with invalid only' do
+      let(:mapper) {
+        mapper_factory.call.use(:cast) {
+          point :point
+        }
+      }
+
+      it {
+        expect {
+          mapper.cast({}, only: {})
+        }.to raise_error(
+          ReeMapper::ArgumentError,
+          "Invalid `only` format"
+        )
+      }
+    end
+
+    context 'with invalid except' do
+      let(:mapper) {
+        mapper_factory.call.use(:cast) {
+          point :point
+        }
+      }
+
+      it {
+        expect {
+          mapper.cast({}, except: {})
+        }.to raise_error(
+          ReeMapper::ArgumentError,
+          "Invalid `except` format"
+        )
+      }
+    end
+  end
+
   describe 'from:' do
     let(:mapper) {
       mapper_factory.call.use(:cast).use(:serialize).use(:db_dump).use(:db_load) {
@@ -34,6 +170,12 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
         integer? :opt_number
         integer :opt_number_long, optional: true
         array? :opt_array, each: integer
+        array? :opt_array_with_blk do
+          integer :id
+        end
+        hash? :optional_hsh do
+          integer :id
+        end
       }
     }
 
@@ -56,6 +198,14 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
 
     it {
       expect(mapper.cast({ number: 1, opt_array: [1] })).to eq({ number: 1, opt_array: [1] })
+    }
+
+    it {
+      expect(mapper.cast({ number: 1, opt_array_with_blk: [{ id: 1 }] })).to eq({ number: 1, opt_array_with_blk: [{ id: 1 }] })
+    }
+
+    it {
+      expect(mapper.cast({ number: 1, optional_hsh: { id: 1 } })).to eq({ number: 1, optional_hsh: { id: 1 } })
     }
   end
 
@@ -156,7 +306,7 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
     }
 
     it {
-      expect { mapper.cast({ number: nil }) }.to raise_error(ReeMapper::TypeError, 'should be an integer')
+      expect { mapper.cast({ number: nil }) }.to raise_error(ReeMapper::TypeError, '`number` should be an integer')
     }
 
     it {
@@ -169,7 +319,7 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
       let(:mapper) { mapper_factory.call.use(:cast) { integer? :number, default: :not_number } }
 
       it {
-        expect { mapper.cast({}) }.to raise_error(ReeMapper::TypeError, 'should be an integer')
+        expect { mapper.cast({}) }.to raise_error(ReeMapper::TypeError, '`number` should be an integer')
       }
     end
   end

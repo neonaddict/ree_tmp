@@ -76,6 +76,7 @@ class ReeMapper::MapperFactory
     raise ArgumentError, "array item can't be optional" if field_name.nil? && optional
     raise ArgumentError, 'array type should use either :each or :block' if each && blk || !each && !blk
     raise ArgumentError, 'invalid :key option value' unless HASH_KEY_OPTION_VALUES.include?(key)
+    raise ArgumentError, 'array does not permit :only and :except keys' if opts.key?(:only) || opts.key?(:except)
 
     if blk
       each = ReeMapper::Field.new(
@@ -90,11 +91,11 @@ class ReeMapper::MapperFactory
     @mapper.add_field(type, field_name, optional: optional, **opts)
   end
 
-  contract(Symbol, Any, Ksplat[RestKeys => Any] => Nilor[ReeMapper::Field])
-  def array?(field_name, each:, **opts)
+  contract(Symbol, Kwargs[each: Nilor[ReeMapper::Field]], Ksplat[RestKeys => Any], Optblock => Nilor[ReeMapper::Field])
+  def array?(field_name, each: nil, **opts, &blk)
     raise ArgumentError if opts.key?(:optional)
 
-    array(field_name, each: each, optional: true, **opts)
+    array(field_name, each: each, optional: true, **opts, &blk)
   end
 
   contract(Symbol, Kwargs[key: Nilor[Symbol]], Ksplat[RestKeys => Any], Block => nil)

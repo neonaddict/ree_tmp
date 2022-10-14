@@ -1,10 +1,10 @@
 {
   "schema_type": "object",
   "schema_version": "1.0",
-  "name": "set_default_logger",
-  "path": "packages/ree_http/package/ree_http/functions/set_default_logger.rb",
+  "name": "load_json_dump",
+  "path": "packages/ree_object/package/ree_object/functions/load_json_dump.rb",
   "mount_as": "fn",
-  "class": "ReeHttp::SetDefaultLogger",
+  "class": "ReeObject::LoadJsonDump",
   "factory": null,
   "methods": [
     {
@@ -15,8 +15,8 @@
       "return": "Any",
       "args": [
         {
-          "arg": "logger",
-          "type": "Any"
+          "arg": "dump",
+          "type": "Hash"
         }
       ]
     }

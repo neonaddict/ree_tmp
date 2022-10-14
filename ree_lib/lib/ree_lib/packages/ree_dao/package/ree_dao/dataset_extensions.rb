@@ -54,23 +54,23 @@ module ReeDao
         entity
       end
 
-      def put_with_conflict(entity, opts = {})
+      def put_with_conflict(entity, conflict_opts = {})
         raw = opts[:schema_mapper].db_dump(entity)
         remove_null_primary_key(raw)
 
-        if opts.key?(:update) && opts[:update].empty?
-          opts.delete(:update)
-        elsif opts[:update].is_a?(Array)
+        if conflict_opts.key?(:update) && conflict_opts[:update].empty?
+          conflict_opts.delete(:update)
+        elsif conflict_opts[:update].is_a?(Array)
           update = {}
 
-          opts[:update].each do |column|
+          conflict_opts[:update].each do |column|
             update[column] = raw[column]
           end
 
-          opts[:update] = update
+          conflict_opts[:update] = update
         end
 
-        key = insert_conflict(opts).insert(raw)
+        key = insert_conflict(conflict_opts).insert(raw)
 
         set_entity_primary_key(entity, raw, key)
         set_persistence_state(entity, raw)
@@ -111,16 +111,20 @@ module ReeDao
       end
 
       def update(entity)
-        raw = opts[:schema_mapper].db_dump(entity)
-        raw = extract_changes(entity, raw)
+        if opts[:schema_mapper]
+          raw = opts[:schema_mapper].db_dump(entity)
+          raw = extract_changes(entity, raw)
 
-        unless raw.empty?
-          update_persistence_state(entity, raw)
-          key_condition = prepare_key_condition_from_entity(entity)
-          where(key_condition).__original_update(raw)
+          unless raw.empty?
+            update_persistence_state(entity, raw)
+            key_condition = prepare_key_condition_from_entity(entity)
+            where(key_condition).__original_update(raw)
+          end
+
+          entity
+        else
+          __original_update(entity)
         end
-
-        entity
       end
 
       def delete(entity = nil)
