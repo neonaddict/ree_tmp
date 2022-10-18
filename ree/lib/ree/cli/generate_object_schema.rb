@@ -18,10 +18,19 @@ module Ree
 
           puts("Generating #{object_name}.schema.json in #{package_name} package") if !silence
 
+          puts "Before Loading package"
+          timeLoadPackage = Time.now
           package = Ree.load_package(package_name)
+          puts "After loading Package #{Time.now - timeLoadPackage} seconds"
+          puts "Before load package object"
+          timeLoadObject = Time.now
           object = Ree.container.packages_facade.load_package_object(package_name, object_name)
+          puts "After load package object #{Time.now - timeLoadObject} seconds"
 
+          puts "Before writing object schema"
+          timeSchemaWrite = Time.now
           Ree.write_object_schema(package.name, object.name)
+          puts "After writing object schema #{Time.now - timeSchemaWrite} seconds"
 
           obj_path = Ree::PathHelper.abs_object_schema_path(object)
 
