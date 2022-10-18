@@ -20,7 +20,9 @@ module Ree
 
           puts "Before Loading package"
           timeLoadPackage = Time.now
-          package = Ree.load_package(package_name)
+          Ree.container.packages_facade.load_package_entry(package_name)
+          package = Ree.container.packages_facade.get_package(package_name)
+          # package = Ree.load_package(package_name)
           puts "After loading Package #{Time.now - timeLoadPackage} seconds"
           puts "Before load package object"
           timeLoadObject = Time.now
