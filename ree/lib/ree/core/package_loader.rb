@@ -59,12 +59,16 @@ class Ree::PackageLoader
     )
 
     if not_loaded.include?(name)
+      beforeLoadTime = Time.now
       load_file(
         Ree::PathHelper.abs_package_entry_path(package), name
       )
+      puts "After load package entry file for #{name}, #{Ree::PathHelper.abs_package_entry_path(package)} #{Time.now - beforeLoadTime}"
 
       Dir[File.join(Ree::PathHelper.abs_package_module_dir(package), '**/*.rb')].each do |path|
+        loadTime = Time.now
         load_file(path, name)
+        puts "Afte load file for #{name} #{path} #{Time.now - loadTime}"
       end
 
       loaded_packages[name] = true
