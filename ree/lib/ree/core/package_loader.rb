@@ -31,7 +31,9 @@ class Ree::PackageLoader
     @loaded_paths[package_name][path] = true
 
     Ree.logger.debug("load_file(:#{package_name}, '#{path}')")
+    timeKern = Time.now
     Kernel.require(path)
+    puts "  After Kernel require #{path} for #{package_name}"
   end
 
   private
