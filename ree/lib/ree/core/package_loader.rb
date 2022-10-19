@@ -19,7 +19,9 @@ class Ree::PackageLoader
     return @loaded_packages[name] if @loaded_packages.has_key?(name)
 
     Ree.logger.debug("full_package_load(:#{name})")
+    testTime = Time.now
     recursively_load_package(name, Hash.new(false))
+    puts "After recursively load package #{name} #{Time.now - testTime}"
     @loaded_packages[name]
   end
 
