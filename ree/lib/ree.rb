@@ -212,7 +212,9 @@ module Ree
     end
 
     def load_package(name)
+      checkArg = Time.now
       check_arg(name, :name, Symbol)
+      puts "CheckArg time #{Time.now - checkArg}"
       container.load_package(name)
     end
 

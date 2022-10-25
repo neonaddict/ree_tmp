@@ -34,7 +34,6 @@ module Ree
             Ree.write_object_schema(package_name, object_name)
           end
 
-
           puts(" #{object.name}: #{obj_path}") if !silence
 
           puts("done") if !silence

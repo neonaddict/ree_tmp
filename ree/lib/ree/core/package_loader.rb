@@ -19,7 +19,10 @@ class Ree::PackageLoader
     return @loaded_packages[name] if @loaded_packages.has_key?(name)
 
     Ree.logger.debug("full_package_load(:#{name})")
+    testTime = Time.now
     recursively_load_package(name, Hash.new(false))
+    diff = Time.now - testTime
+    puts "After recursively load package #{name} #{diff}" if diff > 1
     @loaded_packages[name]
   end
 
@@ -29,7 +32,10 @@ class Ree::PackageLoader
     @loaded_paths[package_name][path] = true
 
     Ree.logger.debug("load_file(:#{package_name}, '#{path}')")
+    timeKern = Time.now
     Kernel.require(path)
+    diff = Time.now - timeKern
+    puts "  After Kernel require #{path} for #{package_name} #{diff}" if diff > 1
   end
 
   private
@@ -57,12 +63,18 @@ class Ree::PackageLoader
     )
 
     if not_loaded.include?(name)
+      beforeLoadTime = Time.now
       load_file(
         Ree::PathHelper.abs_package_entry_path(package), name
       )
+      diff = Time.now - beforeLoadTime
+      puts "After load package entry file for #{name}, #{Ree::PathHelper.abs_package_entry_path(package)} #{diff}" if diff > 1
 
       Dir[File.join(Ree::PathHelper.abs_package_module_dir(package), '**/*.rb')].each do |path|
+        loadTime = Time.now
         load_file(path, name)
+        diff = Time.now - loadTime
+        puts "After load file for #{name} #{path} #{diff}" if diff > 1
       end
 
       loaded_packages[name] = true
