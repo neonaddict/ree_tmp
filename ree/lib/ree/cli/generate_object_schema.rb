@@ -24,8 +24,9 @@ module Ree
           facade = Ree.container.packages_facade
           puts "Before get loaded package"
           a1 = Time.now
-          package = facade.get_loaded_package(package_name)
+          Ree.load_package(package_name)
           puts "Package #{package_name} loaded #{Time.now - a1}"
+          package = facade.get_package(package_name)
 
           if facade.has_object?(package_name, object_name)
             puts "Package have object #{object_name}"
