@@ -18,9 +18,7 @@ module Ree
           puts("Generating #{object_name}.schema.json in #{package_name} package") if !silence
 
           facade = Ree.container.packages_facade
-          Ree.load_package(package_name)
-
-          package = facade.get_package(package_name)
+          package = facade.get_loaded_package(package_name)
 
           if facade.has_object?(package_name, object_name)
             object = facade.load_package_object(package_name, object_name)
