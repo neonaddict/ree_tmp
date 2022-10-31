@@ -44,8 +44,9 @@ module Ree
           else
             puts "Package don't have object #{object_name}"
             file_path = File.join(dir, object_path)
+            puts "file_path #{file_path}"
 
-            if File.exists?(file_path)
+            if File.exist?(file_path)
               puts "File exists #{file_path}"
               puts "Before load file"
               a1 = Time.now
