@@ -37,6 +37,8 @@ class Ree::PackageLoader
   def recursively_load_package(name, loaded_packages)
     @loaded_packages[name] = true
     package = @packages_store.get(name)
+    puts "Package name #{name}"
+    puts "Package dir: #{package&.dir}"
 
     if package.dir.nil?
       package.set_schema_loaded
