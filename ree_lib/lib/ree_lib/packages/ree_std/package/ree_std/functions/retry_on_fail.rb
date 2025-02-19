@@ -31,14 +31,14 @@ class ReeStd::RetryOnFail
       max: Integer,
     ],
     Ksplat[
-      interval?: Integer,
-      max_interval?: Integer,
+      interval?: Or[Float, Integer],
+      max_interval?: Or[Float, Integer],
       backoff_factor?: Integer,
       exceptions?: ArrayOf[SubclassOf[StandardError]],
       retry_block?: Proc,
       retry_if?: Proc,
     ],
-    Block => nil
+    Block => Any
   )
   def call(max:, **opts, &block)
     Retry.new(max: max, **opts).call(&block)

@@ -5,20 +5,6 @@ require_relative 'values'
 require_relative 'contractable'
 
 module ReeEnum::Enumerable
-  module CommonMethods
-    def by_value(value)
-      values.by_value(value)
-    end
-
-    def by_number(number)
-      values.by_number(number)
-    end
-
-    def all
-      values.all
-    end
-  end
-
   def self.included(base)
     base.extend(ClassMethods)
   end
@@ -26,43 +12,60 @@ module ReeEnum::Enumerable
   module ClassMethods
     include ReeEnum::Contractable
 
+    RESTRICTED_METHODS = [
+      :setup_enum, :get_values, :get_enum_name, :val,
+      :__ENCODING__, :__LINE__, :__FILE__, :BEGIN, :END,
+      :alias, :and, :begin, :break, :case, :class, :def, :defined?,
+      :do, :else, :elsif, :end, :ensure, :false, :for, :if, :in,
+      :module, :next, :nil, :not, :or, :redo, :rescue, :retry, :return,
+      :self, :super, :then, :true, :undef, :unless, :until, :when, :while, :yield
+    ].freeze
+
+    ALLOWED_VALUE_TO_METHOD_REGEXP = /^[a-z_]\w*[?!]?$/
+
     def setup_enum(enum_name)
       @values ||= ReeEnum::Values.new(self, enum_name)
     end
 
-    def values
+    def get_values
       @values
     end
 
-    def enum_name
-      return if !@values
-      @values.enum_name
+    def get_enum_name
+      @values&.enum_name
     end
 
-    include CommonMethods
+    def val(value, mapped_value = nil, method: nil)
+      value = value.to_s if value.is_a?(Symbol)
+      mapped_value ||= value
 
-    def val(value, number, label = nil)
-      if value == :new
-        raise ArgumentError.new(":new is not allowed as enum value")
-      end
-      
-      enum_value = values.add(value, number: number, label: label)
-
-      define_method "#{enum_value.value}" do
-        by_value(enum_value.value)
+      if method.nil? && value.is_a?(String) && value.match?(ALLOWED_VALUE_TO_METHOD_REGEXP)
+        method = value.to_sym
       end
 
-      define_singleton_method "#{enum_value.value}" do
-        by_value(enum_value.value)
+      if RESTRICTED_METHODS.include?(method)
+        raise ArgumentError.new("#{method.inspect} is not allowed as enum method")
+      end
+
+      enum_value = @values.add(value, mapped_value, method)
+
+      if !method.nil?
+        class_eval(<<~RUBY, __FILE__, __LINE__ + 1)
+          def #{method}
+            get_values.by_value(#{value.inspect}.freeze)
+          end
+
+          def self.#{method}
+            get_values.by_value(#{value.inspect}.freeze)
+          end
+        RUBY
       end
 
       enum_value
     end
   end
 
-  def values
-    self.class.values
+  def get_values
+    self.class.get_values
   end
-
-  include CommonMethods
 end

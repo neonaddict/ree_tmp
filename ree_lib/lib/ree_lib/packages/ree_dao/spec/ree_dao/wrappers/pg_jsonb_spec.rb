@@ -29,6 +29,7 @@ RSpec.describe 'ReeDao::PgJsonb' do
       pg_jsonb? :number, integer
       pg_jsonb? :boolean, bool
       pg_jsonb? :any, any
+      pg_jsonb? :rational, rational
     end
   }
 
@@ -39,26 +40,29 @@ RSpec.describe 'ReeDao::PgJsonb' do
         numbers: [1, 2],
         figures: [{ coords: 'x=1,y=1' }],
         number: 1,
-        boolean: true
+        boolean: true,
+        rational: Rational("1/3"),
       })).to eq({
         payload: { key: 'key' },
         numbers: [1, 2],
         figures: [{ coords: 'x=1,y=1' }],
         number: 1,
-        boolean: true
+        boolean: true,
+        rational: "1/3",
       })
     }
 
     it {
       expect {
         mapper.db_dump({ numbers: ['1'] })
-      }.to raise_error(ReeMapper::TypeError, "`numbers[0]` should be an integer")
+      }.to raise_error(ReeMapper::TypeError, /`numbers\[0\]` should be an integer, got `\"1\"`/)
     }
 
     it {
+      object = Object.new
       expect {
-        mapper.db_dump({ any: Object.new })
-      }.to raise_error(ReeMapper::TypeError, "`any` should be an jsonb primitive")
+        mapper.db_dump({ any: object })
+      }.to raise_error(ReeMapper::TypeError, /`any` should be an jsonb primitive, got `#{object.inspect}`/)
     }
   end
 
@@ -69,26 +73,29 @@ RSpec.describe 'ReeDao::PgJsonb' do
         numbers: Sequel::Postgres::JSONBArray.new([1, 2]),
         figures: Sequel::Postgres::JSONBArray.new([{ coords: 'x=1,y=1' }]),
         number: 1,
-        boolean: true
+        boolean: true,
+        rational: "1/3"
       })).to eq({
         payload: { key: 'key' },
         numbers: [1, 2],
         figures: [{ coords: 'x=1,y=1' }],
         number: 1,
-        boolean: true
+        boolean: true,
+        rational: Rational("1/3"),
       })
     }
 
     it {
       expect {
         mapper.db_load({ numbers: Sequel::Postgres::JSONBArray.new([1.1]) })
-      }.to raise_error(ReeMapper::TypeError, "`numbers[0]` should be an integer")
+      }.to raise_error(ReeMapper::TypeError, /`numbers\[0\]` should be an integer, got `1.1`/)
     }
 
     it {
+      object = Object.new
       expect {
-        mapper.db_load({ numbers: Object.new })
-      }.to raise_error(ReeMapper::TypeError, "`numbers` is not Sequel::Postgres::JSONB")
+        mapper.db_load({ numbers: object })
+      }.to raise_error(ReeMapper::TypeError, /`numbers` should be a Sequel::Postgres::JSONB, got `#{object.inspect}`/)
     }
   end
 end

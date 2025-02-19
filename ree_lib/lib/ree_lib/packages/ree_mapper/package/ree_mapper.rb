@@ -6,13 +6,16 @@ module ReeMapper
   package do
     depends_on :ree_string
     depends_on :ree_datetime
+    depends_on :ree_dto
   end
 
   package_require('ree_string/functions/underscore')
+  package_require('ree_string/functions/truncate')
   package_require('ree_datetime/functions/in_default_time_zone')
 
   require_relative 'ree_mapper/types/abstract_type'
   require_relative 'ree_mapper/errors/error'
+  require_relative 'ree_mapper/errors/error_with_location'
   require_relative 'ree_mapper/errors/coercion_error'
   require_relative 'ree_mapper/errors/type_error'
   require_relative 'ree_mapper/errors/unsupported_type_error'
@@ -34,9 +37,11 @@ module ReeMapper
   require_relative 'ree_mapper/types/float'
   require_relative 'ree_mapper/types/integer'
   require_relative 'ree_mapper/types/string'
+  require_relative 'ree_mapper/types/rational'
 
   require_relative 'ree_mapper/strategy_outputs/strategy_output'
   require_relative 'ree_mapper/strategy_outputs/object_output'
+  require_relative 'ree_mapper/strategy_outputs/ree_dto_output'
   require_relative 'ree_mapper/strategy_outputs/hash_output'
   require_relative 'ree_mapper/strategy_outputs/struct_output'
 

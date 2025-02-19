@@ -36,6 +36,16 @@ RSpec.describe ReeRoda::App do
       end
     end
 
+    class ReeRodaTest::SerializerErrorCmd
+      include ReeActions::DSL
+
+      action :serializer_error_cmd
+
+      def call(access, attrs)
+        {result: :not_string}
+      end
+    end
+
     class ReeRodaTest::AnotherCmd
       include ReeActions::DSL
 
@@ -116,6 +126,20 @@ RSpec.describe ReeRoda::App do
           serializer :serializer, **opts
         end
 
+        get "api/action/:action_id/test_override" do
+          summary "Subaction"
+          warden_scope :visitor
+          sections "some_action"
+          action :action_cmd, **opts
+          serializer :serializer, **opts
+          override do |r|
+            r.json do
+              r.response.status = 200
+              "result"
+            end
+          end
+        end
+
         get "api/action/:id/subaction" do
           summary "Subaction"
           warden_scope :visitor
@@ -153,6 +177,14 @@ RSpec.describe ReeRoda::App do
           warden_scope :visitor
           sections "some_action"
           action :cmd, **opts
+          serializer :serializer, **opts
+        end
+
+        get "api/serializer_error" do
+          summary "Action with serializer error"
+          warden_scope :visitor
+          sections "some_action"
+          action :serializer_error_cmd, **opts
           serializer :serializer, **opts
         end
       end
@@ -234,6 +266,12 @@ RSpec.describe ReeRoda::App do
   }
 
   it {
+    get "api/action/:action_id/test_override"
+    expect(last_response.status).to eq(200)
+    expect(last_response.body).to eq("result")
+  }
+
+  it {
     post "api/action/1/subaction/2"
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq("{\"result\":\"another_result\"}")
@@ -243,5 +281,15 @@ RSpec.describe ReeRoda::App do
     post "api/action/1/anotheraction"
     expect(last_response.status).to eq(201)
     expect(last_response.body).to eq("{\"result\":\"another_result\"}")
+  }
+
+  it {
+    get "api/action/not_integer"
+    expect(last_response.status).to eq(400)
+  }
+
+  it {
+    get "api/serializer_error"
+    expect(last_response.status).to eq(500)
   }
 end

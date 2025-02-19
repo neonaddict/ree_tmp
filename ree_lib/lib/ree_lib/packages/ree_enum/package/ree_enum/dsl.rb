@@ -1,9 +1,14 @@
+# frozen_string_literal: true
 package_require 'ree_swagger/functions/register_type'
+
+require_relative 'integer_value_enum_mapper'
+require_relative 'string_value_enum_mapper'
 
 module ReeEnum
   module DSL
     def self.included(base)
       base.extend(ClassMethods)
+      base.include(Ree::Inspectable)
     end
 
     def self.extended(base)
@@ -27,80 +32,19 @@ module ReeEnum
       end
 
       def type_for_mapper
-        @type_for_mapper ||= begin
-          klass = Class.new(ReeMapper::AbstractType) do
-            def initialize(enum)
-              @enum = enum
-            end
+        return @type_for_mapper if defined? @type_for_mapper
 
-            contract(
-              ReeEnum::Value,
-              Kwargs[
-                name: String,
-                role: Nilor[Symbol, ArrayOf[Symbol]]
-              ] => String
-            )
-            def serialize(value, name:, role: nil)
-              value.to_s
-            end
+        value_type = get_values.value_type
 
-            contract(
-              Any,
-              Kwargs[
-                name: String,
-                role: Nilor[Symbol, ArrayOf[Symbol]]
-              ] => ReeEnum::Value
-            ).throws(ReeMapper::CoercionError)
-            def cast(value, name:, role: nil)
-              if value.is_a?(String)
-                enum_val = @enum.values.all.detect { |v| v.to_s == value }
-
-                if !enum_val
-                  raise ReeMapper::CoercionError, "`#{name}` should be one of #{@enum.values.all.map(&:to_s).inspect}"
-                end
-
-                enum_val
-              elsif value.is_a?(Integer)
-                enum_val = @enum.values.all.detect { |v| v.to_i == value }
-
-                if !enum_val
-                  raise ReeMapper::CoercionError, "`#{name}` should be one of #{@enum.values.all.map(&:to_s).inspect}"
-                end
-
-                enum_val
-              else
-                enum_val = @enum.values.all.detect { |v| v == value }
-                return enum_val if enum_val
-
-                raise ReeMapper::CoercionError, "`#{name}` should be one of #{@enum.values.all.map(&:to_s).inspect}"
-              end
-            end
-
-            contract(
-              ReeEnum::Value,
-              Kwargs[
-                name: String,
-                role: Nilor[Symbol, ArrayOf[Symbol]]
-              ] => Integer
-            )
-            def db_dump(value, name:, role: nil)
-              value.to_i
-            end
-
-            contract(
-              Integer,
-              Kwargs[
-                name: String,
-                role: Nilor[Symbol, ArrayOf[Symbol]]
-              ] => ReeEnum::Value
-            ).throws(ReeMapper::TypeError)
-            def db_load(value, name:, role: nil)
-              cast(value, name: name, role: role)
-            end
-          end
-
-          klass.new(self)
+        klass = if value_type == String
+          StringValueEnumMapper
+        elsif value_type == Integer
+          IntegerValueEnumMapper
+        else
+          raise NotImplementedError, "value_type #{value_type} is not supported"
         end
+
+        @type_for_mapper = klass.new(self)
       end
 
       def register_as_swagger_type
@@ -110,11 +54,8 @@ module ReeEnum
           swagger_type_registrator.call(
             kind,
             type_for_mapper.class,
-            ->(*) {
-              {
-                type: 'string',
-                enum: values.all.map(&:to_s)
-              }
+            ->(type, _build_schema) {
+              type.enum.swagger_definition
             }
           )
         end
@@ -128,8 +69,27 @@ module ReeEnum
         )
 
         mapper_factory.register_type(
-          self.enum_name, type_for_mapper
+          self.get_enum_name, type_for_mapper
         )
+      end
+
+      def swagger_definition
+        return @swagger_definition if defined? @swagger_definition
+
+        value_type = get_values.value_type
+
+        type = if value_type == String
+          "string"
+        elsif value_type == Integer
+          "integer"
+        else
+          raise NotImplementedError, "value_type #{value_type} is not supported"
+        end
+
+        @swagger_definition = {
+          type: type,
+          enum: get_values.each.map(&:value)
+        }
       end
     end
   end

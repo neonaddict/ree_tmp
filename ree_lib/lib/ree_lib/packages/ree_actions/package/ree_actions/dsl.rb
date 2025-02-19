@@ -1,21 +1,18 @@
+# frozen_string_literal: true
+package_require("ree_mapper/errors/type_error")
+package_require("ree_mapper/errors/coercion_error")
+
 module ReeActions
   module DSL
     def self.included(base)
       base.extend(ClassMethods)
       base.include(ReeMapper::DSL)
-      link_dao_cache(base)
+      base.include(Ree::Inspectable)
     end
 
     def self.extended(base)
       base.extend(ClassMethods)
       base.include(ReeMapper::DSL)
-      link_dao_cache(base)
-    end
-
-    private_class_method def self.link_dao_cache(base)
-      base.include(Ree::LinkDSL)
-      base.link :drop_cache, as: :__ree_dao_drop_cache, from: :ree_dao
-      base.link :init_cache, as: :__ree_dao_init_cache, from: :ree_dao
     end
 
     module ClassMethods
@@ -47,9 +44,7 @@ module ReeActions
 
         alias_method(:__original_call, :call)
 
-        define_method :call do |user_access, attrs|
-          __ree_dao_init_cache
-
+        define_method :call do |user_access, attrs, &proc|
           if self.class.const_defined?(:ActionCaster)
             caster = self.class.const_get(:ActionCaster)
 
@@ -57,12 +52,14 @@ module ReeActions
               raise ArgumentError.new("ActionCaster does not respond to `cast` method")
             end
 
-            __original_call(user_access, caster.cast(attrs))
-          else
-            __original_call(user_access, attrs)
+            attrs = begin
+              caster.cast(attrs)
+            rescue ReeMapper::TypeError, ReeMapper::CoercionError => e
+              raise ReeActions::ParamError, e.message
+            end
           end
-        ensure
-          __ree_dao_drop_cache
+
+          __original_call(user_access, attrs, &proc)
         end
 
         nil

@@ -1,23 +1,23 @@
 # frozen_string_literal: true
 
 class ReeMapper::Any < ReeMapper::AbstractType
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Any)
-  def serialize(value, name:, role: nil)
+  contract(Any => Any)
+  def serialize(value)
     value
   end
 
-  contract(Any , Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Any)
-  def cast(value, name:, role: nil)
+  contract(Any => Any)
+  def cast(value)
     value
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Any)
-  def db_dump(value, name:, role: nil)
+  contract(Any => Any)
+  def db_dump(value)
     value
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Any)
-  def db_load(value, name:, role: nil)
+  contract(Any => Any)
+  def db_load(value)
     value
   end
 end

@@ -1,4 +1,4 @@
-# frozen_string_literal  = true
+# frozen_string_literal: true
 
 module Ree::PackagesSchema
   SCHEMA_VERSION_NUMBER = '1.0'
@@ -11,12 +11,12 @@ module Ree::PackagesSchema
 
   module Packages
     NAME = 'name'
-    SCHEMA = 'schema'
+    ENTRY_PATH = 'entry_path'
     GEM = 'gem'
   end
 
   module GemPackages
     NAME = 'name'
-    SCHEMA = 'schema'
+    ENTRY_PATH = 'entry_path'
   end
 end

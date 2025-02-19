@@ -1,4 +1,4 @@
-# frozen_string_literal  = true
+# frozen_string_literal: true
 
 require 'pathname'
 
@@ -55,13 +55,19 @@ class Ree::Container
 
     @packages_facade.get_loaded_package(package_name)
     @packages_facade.load_package_object(package_name, name)
-    
+
     @object_compiler.call(package_name, name)
   end
 
   # @param [Symbol] package_name
   # @return [Ree::Package]
   def load_package(package_name)
+    @packages_facade.read_package_structure(package_name)
+  end
+
+  # @param [Symbol] package_name
+  # @return [Ree::Package]
+  def load_entire_package(package_name)
     @packages_facade.load_entire_package(package_name)
   end
 end

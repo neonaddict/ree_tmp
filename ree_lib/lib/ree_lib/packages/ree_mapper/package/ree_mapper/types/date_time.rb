@@ -3,17 +3,17 @@
 require 'date'
 
 class ReeMapper::DateTime < ReeMapper::AbstractType
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => DateTime).throws(ReeMapper::TypeError)
-  def serialize(value, name:, role: nil)
+  contract(Any => DateTime).throws(ReeMapper::TypeError)
+  def serialize(value)
     if value.class == DateTime
       value
     else
-      raise ReeMapper::TypeError, "`#{name}` should be a datetime"
+      raise ReeMapper::TypeError.new("should be a datetime, got `#{truncate(value.inspect)}`")
     end
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => DateTime).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
-  def cast(value, name:, role: nil)
+  contract(Any => DateTime).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
+  def cast(value)
     if value.class == DateTime
       value
     elsif value.class == Time
@@ -22,20 +22,20 @@ class ReeMapper::DateTime < ReeMapper::AbstractType
       begin
         ReeDatetime::InDefaultTimeZone.new.call(DateTime.parse(value))
       rescue ArgumentError
-        raise ReeMapper::CoercionError, "`#{name}` is invalid datetime"
+        raise ReeMapper::CoercionError.new("is invalid datetime, got `#{truncate(value.inspect)}`")
       end
     else
-      raise ReeMapper::TypeError, "`#{name}` should be a datetime"
+      raise ReeMapper::TypeError.new("should be a datetime, got `#{truncate(value.inspect)}`")
     end
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => DateTime).throws(ReeMapper::TypeError)
-  def db_dump(value, name:, role: nil)
-    serialize(value, name: name, role: role)
+  contract(Any => DateTime)
+  def db_dump(value)
+    serialize(value)
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => DateTime).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
-  def db_load(value, name:, role: nil)
-    cast(value, name: name, role: role)
+  contract(Any => DateTime)
+  def db_load(value)
+    cast(value)
   end
 end

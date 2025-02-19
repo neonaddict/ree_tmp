@@ -116,37 +116,18 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
       }
     end
 
-    context 'with invalid only' do
+    context "with empty nested filter" do
       let(:mapper) {
         mapper_factory.call.use(:cast) {
-          point :point
+          hash :point_wrap do
+            point :point
+          end
         }
       }
 
       it {
-        expect {
-          mapper.cast({}, only: {})
-        }.to raise_error(
-          ReeMapper::ArgumentError,
-          "Invalid `only` format"
-        )
-      }
-    end
-
-    context 'with invalid except' do
-      let(:mapper) {
-        mapper_factory.call.use(:cast) {
-          point :point
-        }
-      }
-
-      it {
-        expect {
-          mapper.cast({}, except: {})
-        }.to raise_error(
-          ReeMapper::ArgumentError,
-          "Invalid `except` format"
-        )
+        expect(mapper.cast({ point_wrap: { point: { x: 1, y: 1, z: 1 } } }, only: [point_wrap: [:point]]))
+          .to eq({ point_wrap: { point: { x: 1, y: 1, z: 1 } } })
       }
     end
   end
@@ -193,7 +174,7 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
     }
 
     it {
-      expect { mapper.cast({}) }.to raise_error(ReeMapper::TypeError)
+      expect { mapper.cast({}) }.to raise_error(ReeMapper::TypeError, /`number` is missing \(required field\)/)
     }
 
     it {
@@ -226,7 +207,7 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
     }
 
     it {
-      expect { mapper.cast({ number: nil, number_or_nil: 1 }) }.to raise_error(ReeMapper::TypeError)
+      expect { mapper.cast({ number: nil, number_or_nil: 1 }) }.to raise_error(ReeMapper::TypeError, /`number` should be an integer, got `nil`/)
     }
   end
 
@@ -306,7 +287,7 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
     }
 
     it {
-      expect { mapper.cast({ number: nil }) }.to raise_error(ReeMapper::TypeError, '`number` should be an integer')
+      expect { mapper.cast({ number: nil }) }.to raise_error(ReeMapper::TypeError, /`number` should be an integer, got `nil`/)
     }
 
     it {
@@ -319,7 +300,7 @@ RSpec.describe 'ReeMapper::MapperFactory type options' do
       let(:mapper) { mapper_factory.call.use(:cast) { integer? :number, default: :not_number } }
 
       it {
-        expect { mapper.cast({}) }.to raise_error(ReeMapper::TypeError, '`number` should be an integer')
+        expect { mapper.cast({}) }.to raise_error(ReeMapper::TypeError, /`number` should be an integer, got `:not_number`/)
       }
     end
   end

@@ -1,12 +1,12 @@
-# frozen_string_literal  = true
+# frozen_string_literal: true
 
 class Ree::Object
   attr_reader :name, :rpath, :schema_rpath, :package_name, :klass,
               :package_name, :factory, :after_init,
               :class_name, :links, :mount_as, :freeze,
               :errors, :linked_const_list, :compiled_frozen,
-              :singleton, :tags
-  
+              :singleton, :tags, :target, :with_caller
+
   # @param [Symbol] name Object name
   # @param [String] schema_rpath Object schema path relative to project root dir
   # @param [String] rpath Object source file path relative to project root dir
@@ -16,10 +16,12 @@ class Ree::Object
     @rpath = rpath
     @links = []
     @errors = []
+    @target = :object
     @loaded = false
     @freeze = true
     @compiled = false
     @singleton = false
+    @with_caller = false
     @compiled_frozen = @freeze
     @linked_const_list = []
     @tags = []
@@ -28,6 +30,8 @@ class Ree::Object
   def reset
     @compiled = false
     @singleton = false
+    @with_caller = false
+    @target = :object
     @loaded = false
     @factory = nil
     @after_init = nil
@@ -55,6 +59,10 @@ class Ree::Object
     @compiled_frozen = @freeze
   end
 
+  def with_caller?
+    @with_caller
+  end
+
   def compiled?
     @compiled
   end
@@ -79,6 +87,15 @@ class Ree::Object
     @freeze
   end
 
+  def singleton?
+    @singleton
+  end
+
+  # @param [Symbol] val Object linking target (:object, :class, :both)
+  def set_target(val)
+    @target = val; self
+  end
+
   # @param [Symbol] val Object mount as type (:fn or :bean)
   def set_mount_as(val)
     @mount_as = val; self
@@ -91,6 +108,11 @@ class Ree::Object
 
   def set_as_singleton
     @singleton = true; self
+  end
+
+
+  def set_as_with_caller
+    @with_caller = true; self
   end
 
   def object?

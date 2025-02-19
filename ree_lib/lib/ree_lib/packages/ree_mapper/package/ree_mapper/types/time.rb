@@ -3,17 +3,17 @@
 require 'time'
 
 class ReeMapper::Time < ReeMapper::AbstractType
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Time).throws(ReeMapper::TypeError)
-  def serialize(value, name:, role: nil)
+  contract(Any => Time).throws(ReeMapper::TypeError)
+  def serialize(value)
     if value.class == Time
       value
     else
-      raise ReeMapper::TypeError, "`#{name}` should be a time"
+      raise ReeMapper::TypeError.new("should be a time, got `#{truncate(value.inspect)}`")
     end
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Time).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
-  def cast(value, name:, role: nil)
+  contract(Any => Time).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
+  def cast(value)
     if value.class == Time
       value
     elsif value.class == DateTime
@@ -22,20 +22,20 @@ class ReeMapper::Time < ReeMapper::AbstractType
       begin
         Time.parse(value)
       rescue ArgumentError
-        raise ReeMapper::CoercionError, "`#{name}` is invalid time"
+        raise ReeMapper::CoercionError.new("is invalid time, got `#{truncate(value.inspect)}`")
       end
     else
-      raise ReeMapper::TypeError, "`#{name}` should be a time"
+      raise ReeMapper::TypeError.new("should be a time, got `#{truncate(value.inspect)}`")
     end
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Time).throws(ReeMapper::TypeError)
-  def db_dump(value, name:, role: nil)
-    serialize(value, name: name, role: role)
+  contract(Any => Time).throws(ReeMapper::TypeError)
+  def db_dump(value)
+    serialize(value)
   end
 
-  contract(Any, Kwargs[name: String, role: Nilor[Symbol, ArrayOf[Symbol]]] => Time).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
-  def db_load(value, name:, role: nil)
-    cast(value, name: name, role: role)
+  contract(Any => Time).throws(ReeMapper::CoercionError, ReeMapper::TypeError)
+  def db_load(value)
+    cast(value)
   end
 end

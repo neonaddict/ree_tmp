@@ -1,20 +1,32 @@
 module ReeDao
   class Associations
     include Ree::LinkDSL
+    include ReeDao::AssociationMethods
 
-    attr_reader :agg_caller, :list, :local_vars, :only, :except, :autoload_children, :global_opts
+    attr_reader :agg_caller, :list, :local_vars, :only, :except, :parent_dao, :autoload_children, :global_opts
 
-    def initialize(agg_caller, list, local_vars, autoload_children = false, **opts)
+    def initialize(agg_caller, list, local_vars, parent_dao, autoload_children = false, **opts)
       @agg_caller = agg_caller
       @list = list
       @local_vars = local_vars
-      @threads = [] if !self.class.sync_mode?
-      @global_opts = opts
+      @global_opts = opts || {}
       @only = opts[:only] if opts[:only]
       @except = opts[:except] if opts[:except]
+      @parent_dao = parent_dao
       @autoload_children = autoload_children
 
-      raise ArgumentError.new("you can't use both :only and :except arguments at the same time") if @only && @except
+      if @only && @except
+        shared_keys = @only.intersection(@except)
+
+        if shared_keys.size > 0
+          raise ArgumentError.new("you can't use both :only and :except for #{shared_keys.map { "\"#{_1}\"" }.join(", ")} keys")
+        end
+      end
+
+      if !self.class.sync_mode?
+        @assoc_threads = []
+        @field_threads = []
+      end
 
       local_vars.each do |k, v|
         instance_variable_set(k, v)
@@ -31,58 +43,34 @@ module ReeDao
 
     contract(
       Symbol,
-      Ksplat[
-        scope?: Sequel::Dataset,
-        setter?: Or[Symbol, Proc],
-        foreign_key?: Symbol,
-        autoload_children?: Bool
-      ],
+      Nilor[Proc, Sequel::Dataset],
       Optblock => Any
     )
-    def belongs_to(assoc_name, **opts, &block)
-      association(__method__, assoc_name, **opts, &block)
+    def belongs_to(assoc_name, __opts = nil, &block)
+      association(__method__, assoc_name, __opts, &block)
     end
-  
+
     contract(
       Symbol,
-      Ksplat[
-        scope?: Sequel::Dataset,
-        setter?: Or[Symbol, Proc],
-        foreign_key?: Symbol,
-        autoload_children?: Bool
-      ],
+      Nilor[Proc, Sequel::Dataset],
       Optblock => Any
     )
-    def has_one(assoc_name, **opts, &block)
-      association(__method__, assoc_name, **opts, &block)
+    def has_one(assoc_name, __opts = nil, &block)
+      association(__method__, assoc_name, __opts, &block)
     end
-  
+
     contract(
       Symbol,
-      Ksplat[
-        scope?: Sequel::Dataset,
-        setter?: Or[Symbol, Proc],
-        foreign_key?: Symbol,
-        autoload_children?: Bool
-      ],
+      Nilor[Proc, Sequel::Dataset],
       Optblock => Any
     )
-    def has_many(assoc_name, **opts, &block)
-      association(__method__, assoc_name, **opts, &block)
+    def has_many(assoc_name, __opts = nil, &block)
+      association(__method__, assoc_name, __opts, &block)
     end
-  
-    contract(
-      Symbol,
-      Ksplat[
-        scope?: Sequel::Dataset,
-        setter?: Or[Symbol, Proc],
-        foreign_key?: Symbol,
-        autoload_children?: Bool
-      ],
-      Optblock => Any
-    )
-    def field(assoc_name, **opts, &block)
-      association(__method__, assoc_name, **opts, &block)
+
+    contract(Symbol, Proc => Any)
+    def field(assoc_name, proc)
+      association(__method__, assoc_name, proc)
     end
 
     private
@@ -95,26 +83,42 @@ module ReeDao
         :field
       ],
       Symbol,
-      Ksplat[
-        scope?: Sequel::Dataset,
-        setter?: Or[Symbol, Proc],
-        foreign_key?: Symbol,
-        autoload_children?: Bool
-      ],
+      Nilor[Proc, Sequel::Dataset],
       Optblock => Any
     )
-    def association(assoc_type, assoc_name, **assoc_opts, &block)
-      if self.class.sync_mode?
-        return if association_is_not_included?(assoc_name)
+    def association(assoc_type, assoc_name, __opts, &block)
+      if parent_dao.nil? || parent_dao.db.in_transaction? || self.class.sync_mode?
+        return if association_is_not_included?(assoc_name) || list.empty?
 
-        association = Association.new(self, list, **global_opts)
-        association.load(assoc_type, assoc_name, **assoc_opts, &block)
+        association = Association.new(self, parent_dao, list, **global_opts)
+
+        if assoc_type == :field
+          association.handle_field(__opts)
+        else
+          association.load(assoc_type, assoc_name, **get_assoc_opts(__opts), &block)
+        end
       else
-        return @threads if association_is_not_included?(assoc_name)
+        if association_is_not_included?(assoc_name) || list.empty?
+          return { association_threads: @assoc_threads, field_threads: @field_threads }
+        end
 
-        @threads << Thread.new do
-          association = Association.new(self, list, **global_opts)
-          association.load(assoc_type, assoc_name, **assoc_opts, &block)
+        association = Association.new(self, parent_dao, list, **global_opts)
+
+        if assoc_type == :field
+          field_proc = __opts
+          {
+            association_threads: @assoc_threads,
+            field_threads: @field_threads << [
+              association, field_proc
+            ]
+          }
+        else
+          {
+            association_threads: @assoc_threads << [
+              association, assoc_type, assoc_name, get_assoc_opts(__opts), block
+            ],
+            field_threads: @field_threads
+          }
         end
       end
     end
@@ -127,8 +131,11 @@ module ReeDao
         return false if only && only.include?(assoc_name)
 
         if only && !only.include?(assoc_name)
-          return false if autoload_children
-          return true 
+          if autoload_children
+            return true if except && except.include?(assoc_name)
+            return false
+          end
+          return true
         end
       end
 
@@ -143,6 +150,16 @@ module ReeDao
       return super if !agg_caller.private_methods(false).include?(method)
 
       agg_caller.send(method, *args, &block)
+    end
+
+    def get_assoc_opts(opts)
+      if opts.is_a?(Proc)
+        opts.call
+      elsif opts.is_a?(Sequel::Dataset)
+        { scope: opts }
+      else
+        {}
+      end
     end
   end
 end

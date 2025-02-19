@@ -40,51 +40,78 @@ module Ree::LinkDSL
     # @param [Nilor[Symbol]] as
     # @param [Nilor[Symbol]] from
     # @param [Nilor[Proc]] import
-    def _link_object(object_name, as: nil, from: nil, import: nil)
+    def _link_object(object_name, as: nil, from: nil, target: nil, import: nil)
       check_arg(object_name, :object_name, Symbol)
       check_arg(as, :as, Symbol) if as
       check_arg(from, :from, Symbol) if from
       check_arg(import, :import, Proc) if import
 
-      package_name = Ree::StringUtils.underscore(self.name.split('::').first).to_sym
-      link_package_name = from.nil? ? package_name : from
+      if target && ![:object, :class, :both].include?(target)
+        raise Ree::Error.new("target should be one of [:object, :class, :both]", :invalid_dsl_usage)
+      end
+
+      packages = Ree.container.packages_facade
+      link_package_name = get_link_package_name(from, object_name)
       link_object_name = object_name
       link_as = as ? as : object_name
 
-      _check_package_dependency_added(link_package_name, package_name)
-
       if import
-        Ree::LinkImportBuilder
-          .new(Ree.container.packages_facade)
-          .build(
-            self,
-            link_package_name,
-            link_object_name,
-            import
-          )
+        Ree::LinkImportBuilder.new(packages).build(
+          self, link_package_name, link_object_name, import
+        )
       end
 
-      obj = Ree
-        .container
-        .packages_facade
-        .load_package_object(link_package_name, link_object_name)
+      obj = packages.load_package_object(link_package_name, link_object_name)
+      target ||= obj.target
 
+      if target == :both
+        mount_obj(obj, link_as, true)
+        mount_obj(obj, link_as, false)
+      elsif target == :class
+        mount_obj(obj, link_as, true)
+      elsif target == :object
+        mount_obj(obj, link_as, false)
+      end
+    end
+
+    def mount_obj(obj, link_as, mount_self)
       if obj.fn?
-        self.class_eval %Q(
-          private def _#{link_as}
-            @#{link_as} ||= #{obj.klass}.new
-          end
-
-          private def #{link_as}(*args, **kwargs, &block)
-            _#{link_as}.call(*args, **kwargs, &block)
-          end
-        )
+        if obj.with_caller?
+          self.class_eval %Q(
+            #{mount_self ? "class << self" : ""}
+            private def #{link_as}(*args, **kwargs, &block)
+              #{obj.klass}.new.set_caller(self).call(*args, **kwargs, &block)
+            end
+            #{mount_self ? "end" : ""}
+          )
+        else
+          self.class_eval %Q(
+            #{mount_self ? "class << self" : ""}
+            private def #{link_as}(*args, **kwargs, &block)
+              @#{link_as} ||= #{obj.klass}.new
+              @#{link_as}.call(*args, **kwargs, &block)
+            end
+            #{mount_self ? "end" : ""}
+          )
+        end
       else
-        self.class_eval %Q(
-          private def #{link_as}
-            @#{link_as} ||= #{obj.klass}.new
-          end
-        )
+        if obj.with_caller?
+          self.class_eval %Q(
+            #{mount_self ? "class << self" : ""}
+            private def #{link_as}
+              #{obj.klass}.new.set_caller(self)
+            end
+            #{mount_self ? "end" : ""}
+          )
+        else
+          self.class_eval %Q(
+            #{mount_self ? "class << self" : ""}
+            private def #{link_as}
+              @#{link_as} ||= #{obj.klass}.new
+            end
+            #{mount_self ? "end" : ""}
+          )
+        end
       end
     end
 
@@ -95,12 +122,9 @@ module Ree::LinkDSL
 
       list = path.split('/')
       package_name = File.basename(list[0], ".*").to_sym
-      current_package_name = Ree::StringUtils.underscore(self.name.split('::').first).to_sym
-
-      _check_package_dependency_added(package_name, current_package_name)
-
-      Ree.container.packages_facade.load_package_entry(package_name)
-      package = Ree.container.packages_facade.get_package(package_name)
+      packages = Ree.container.packages_facade
+      packages.load_package_entry(package_name)
+      package = packages.get_package(package_name)
 
       file_path = File.join(
         Ree::PathHelper.abs_package_dir(package),
@@ -115,7 +139,7 @@ module Ree::LinkDSL
         end
       end
 
-      Ree.container.packages_facade.load_file(file_path, package.name)
+      packages.load_file(file_path, package.name)
 
       const_list = path.split('/').map { |_| Ree::StringUtils.camelize(_) }
       const_short = [const_list[0], const_list.last].join("::")
@@ -130,13 +154,9 @@ module Ree::LinkDSL
       end
 
       if import_proc
-        Ree::LinkImportBuilder
-          .new(Ree.container.packages_facade)
-          .build_for_const(
-            self,
-            file_const,
-            import_proc
-          )
+        Ree::LinkImportBuilder.new(packages).build_for_const(
+          self, file_const, import_proc
+        )
       end
 
       nil
@@ -144,33 +164,24 @@ module Ree::LinkDSL
 
     def _raise_error(text, code = :invalid_dsl_usage)
       msg = <<~DOC
-        object: :#{@object.name}
-        path: #{Ree::PathHelper.abs_object_path(@object)}
+        class: :#{self}
         error: #{text}
       DOC
 
       raise Ree::Error.new(msg, code)
     end
 
-    def _check_package_dependency_added(package_name, current_package_name)
-      return if package_name == current_package_name
+    def get_link_package_name(from, object_name)
+      return from if from
 
-      facade = Ree.container.packages_facade
-      facade.load_package_entry(package_name)
-      facade.load_package_entry(current_package_name)
+      package_name = Ree::StringUtils.underscore(self.name.split('::').first).to_sym
+      result = Ree.container.packages_facade.has_package?(package_name) ? package_name : nil
 
-      current_package = facade.get_package(current_package_name)
-
-      dep_package = current_package.deps.detect do |d|
-        d.name == package_name
+      if result.nil?
+        raise Ree::Error.new("package is not provided for link :#{object_name}", :invalid_dsl_usage)
       end
 
-      if dep_package.nil?
-        raise Ree::Error.new(
-          "Package :#{package_name} is not added as dependency for :#{current_package_name} package\npackage path: #{File.join(Ree.root_dir, current_package.entry_rpath || "")}\nclass:#{self.name}",
-          :invalid_dsl_usage
-        )
-      end
+      result
     end
   end
 end

@@ -1,4 +1,4 @@
-# frozen_string_literal  = true
+# frozen_string_literal: true
 
 require 'pathname'
 
@@ -45,11 +45,13 @@ class Ree::ObjectDsl
   # @param [Nilor[Symbol]] as
   # @param [Nilor[Symbol]] from
   # @param [Nilor[Proc]] import
-  def link_object(object_name, as: nil, from: nil, import: nil)
+  # @param [Or[:object, :class, :both]] import
+  def link_object(object_name, as: nil, from: nil, import: nil, target: nil)
     check_arg(object_name, :object_name, Symbol)
     check_arg(as, :as, Symbol) if as
     check_arg(from, :from, Symbol) if from
     check_arg(import, :import, Proc) if import
+    check_target(target) if target
 
     link_package_name = from.nil? ? @object.package_name : from
     link_object_name = object_name
@@ -69,7 +71,7 @@ class Ree::ObjectDsl
     end
 
     link = Ree::ObjectLink.new(
-      link_object_name, link_package_name, link_as
+      link_object_name, link_package_name, link_as, target
     )
 
     if const_list
@@ -83,6 +85,28 @@ class Ree::ObjectDsl
     @packages_facade.load_package_object(link_package_name, link_object_name)
   end
 
+  # @param [Symbol] target (:object, :class, :both, default: :object)
+  def target(val)
+    check_arg(val, :target, Symbol)
+    check_target(val)
+
+    @object.set_target(val)
+  end
+
+  def with_caller
+    @object.set_freeze(false)
+
+    if @object.singleton?
+      raise_error("`with_caller` is not available for singletons")
+    end
+
+    if @object.factory?
+      raise_error("`with_caller` is not available for factory beans")
+    end
+
+    @object.set_as_with_caller
+  end
+
   # @param [Symbol] method_name
   def factory(method_name)
     if !@object.object?
@@ -93,11 +117,19 @@ class Ree::ObjectDsl
       raise_error("Factory beans do not support after_init DSL")
     end
 
+    if @object.with_caller?
+      raise_error("Factory beans do not support with_caller DSL")
+    end
+
     check_arg(method_name, :method_name, Symbol)
     @object.set_factory(method_name)
   end
 
   def singleton
+    if @object.with_caller?
+      raise_error("`singleton` should not be combined with `with_caller`")
+    end
+
     @object.set_as_singleton
   end
 
@@ -113,42 +145,12 @@ class Ree::ObjectDsl
 
   # @param [Bool] flag
   def freeze(flag)
+    if @object.with_caller? && flag
+      raise_error("`freeze` should not be combined with `with_caller`")
+    end
+
     check_bool(flag, :flag)
     @object.set_freeze(flag)
-  end
-
-  # @param [Nilor[Symbol]] code Global error code
-  # @param [Proc] proc Error DSL proc
-  def def_error(code = nil, &proc)
-    check_arg(code, :code, Symbol) if code
-
-    if !block_given?
-      raise_error("def_error should accept block with error class definition")
-    end
-
-    if code && !Ree.error_types.include?(code)
-      raise_error("Invalid error code :#{code}. Did you forget to setup it with Ree.add_error_types(*args)?")
-    end
-
-    class_name = begin
-      Ree::ErrorBuilder
-        .new(@packages_facade)
-        .build(
-          @object,
-          code,
-          &proc
-        )
-    rescue Ree::Error
-      raise_error("invalid def_error usage. Valid examples: def_error { InvalidDomainErr } or def_error(:validation) { EmailTakenErr['email taken'] }")
-    end
-
-    @object.add_const_list([class_name])
-
-    @object.errors.push(
-      Ree::ObjectError.new(
-        class_name
-      )
-    )
   end
 
   # @param [String] path Relative package file path ('accounts/entities/user')
@@ -227,12 +229,14 @@ class Ree::ObjectDsl
       raise Ree::Error.new("Mount as should be one of #{MOUNT_AS.inspect}", :invalid_dsl_usage)
     end
 
-    object_name_from_path = if File.exist?(path) && !Ree.irb_mode?
-      File.basename(path, ".*").to_sym
-    end
+    if !Ree.irb_mode?
+      object_name_from_path = if File.exist?(path)
+        File.basename(path, ".*").to_sym
+      end
 
-    if !Ree.irb_mode? && object_name_from_path && object_name != object_name_from_path
-      raise Ree::Error.new("Object name does not correspond to a file name (#{object_name}, #{object_name_from_path}.rb). Fix object name or rename object file", :invalid_dsl_usage)
+      if object_name_from_path && object_name != object_name_from_path
+        raise Ree::Error.new("Object name does not correspond to a file name (#{object_name}, #{object_name_from_path}.rb). Fix object name or rename object file", :invalid_dsl_usage)
+      end
     end
 
     class_name = klass.to_s
@@ -306,6 +310,12 @@ class Ree::ObjectDsl
 
     if dep_package.nil?
       raise_error("Package :#{package_name} is not added as dependency for :#{@object.package_name} package\npackage path: #{File.join(Ree.root_dir, @package.entry_rpath)}")
+    end
+  end
+
+  def check_target(val)
+    if ![:object, :class, :both].include?(val)
+      raise Ree::Error.new("target should be one of [:object, :class, :both]", :invalid_dsl_usage)
     end
   end
 

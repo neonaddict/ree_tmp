@@ -93,6 +93,8 @@ module Ree
         @packages_to_run.each do |package|
           ree_package = Ree.container.packages_facade.get_package(package)
 
+          next if ree_package.dir.nil?
+
           Ree::SpecRunner::Runner.new(
             path: Ree::PathHelper.project_root_dir(ree_package),
             package: package,
@@ -107,7 +109,7 @@ module Ree
       def project_packages(packages)
         packages.reject(&:gem?)
       end
-      
+
       def non_existent_packages
         @package_names ? @package_names - packages.map(&:name) : []
       end
@@ -116,7 +118,7 @@ module Ree
         names = packages.map(&:name)
 
         names.select do |package_name|
-          package = container.packages_facade.read_package_schema_json(package_name)
+          package = container.packages_facade.get_loaded_package(package_name)
           package.tags.include?(@tag_name)
         end.compact
       end
@@ -148,7 +150,7 @@ module Ree
 
         unless acc.include?(package.name)
           acc << package.name
-          
+
           package.deps.map(&:name).each do |pack|
             next if !packages_set.include?(pack)
             recursively_find_children_packages(pack, acc)

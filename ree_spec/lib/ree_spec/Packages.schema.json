@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0",
+  "schema_type": "packages",
+  "packages": [
+    {
+      "name": "ree_spec_cli",
+      "entry_path": "packages/ree_spec_cli/package/ree_spec_cli.rb"
+    }
+  ],
+  "gem_packages": [
+    {
+      "gem": "ree_lib",
+      "name": "ree_actions",
+      "entry_path": "packages/ree_actions/package/ree_actions.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_array",
+      "entry_path": "packages/ree_array/package/ree_array.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_dao",
+      "entry_path": "packages/ree_dao/package/ree_dao.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_date",
+      "entry_path": "packages/ree_date/package/ree_date.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_datetime",
+      "entry_path": "packages/ree_datetime/package/ree_datetime.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_dto",
+      "entry_path": "packages/ree_dto/package/ree_dto.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_enum",
+      "entry_path": "packages/ree_enum/package/ree_enum.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_errors",
+      "entry_path": "packages/ree_errors/package/ree_errors.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_hash",
+      "entry_path": "packages/ree_hash/packages/ree_hash.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_http",
+      "entry_path": "packages/ree_http/packages/ree_http.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_i18n",
+      "entry_path": "packages/ree_i18n/packages/ree_i18n.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_json",
+      "entry_path": "packages/ree_json/packages/ree_json.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_logger",
+      "entry_path": "packages/ree_logger/packages/ree_logger.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_mapper",
+      "entry_path": "packages/ree_mapper/packages/ree_mapper.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_migrator",
+      "entry_path": "packages/ree_migrator/packages/ree_migrator.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_number",
+      "entry_path": "packages/ree_number/packages/ree_number.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_object",
+      "entry_path": "packages/ree_object/package/ree_object.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_roda",
+      "entry_path": "packages/ree_roda/package/ree_roda.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_routes",
+      "entry_path": "packages/ree_routes/package/ree_routes.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_std",
+      "entry_path": "packages/ree_std/package/ree_std.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_string",
+      "entry_path": "packages/ree_string/package/ree_string.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_swagger",
+      "entry_path": "packages/ree_swagger/package/ree_swagger.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_text",
+      "entry_path": "packages/ree_text/package/ree_text.rb"
+    },
+    {
+      "gem": "ree_lib",
+      "name": "ree_validator",
+      "entry_path": "packages/ree_validator/package/ree_validator.rb"
+    }
+  ]
+}

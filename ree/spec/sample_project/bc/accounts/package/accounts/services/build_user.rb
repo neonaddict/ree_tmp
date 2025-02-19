@@ -2,17 +2,17 @@ class Accounts::BuildUser
   include Ree::FnDSL
 
   fn :build_user do
-    link :user_states, import: -> { UserStates }
-    link :users_repo
-    link :time, from: :clock
+    link :user_states
     link :raise_error, from: :errors
+    link :time, from: :clock
+    link :users_repo
     link 'accounts/entities/user', -> { User }
-
-    def_error(:not_found) { InvalidDomainErr }
-    def_error(:validation) { EmailTakenErr["email taken"] }
   end
 
-  ALLOWED_DOMAINS = 'google.com'
+  InvalidDomainErr = Class.new(ArgumentError)
+  EmailTakenErr = Class.new(ArgumentError)
+
+  ALLOWED_DOMAINS = 'test.com'
 
   contract(String, String => User).throws(InvalidDomainErr, EmailTakenErr)
   def call(name, email)
@@ -30,7 +30,7 @@ class Accounts::BuildUser
   private
 
   def validate_email(email)
-    if ALLOWED_DOMAINS.include?(email.split('@').last)
+    if !ALLOWED_DOMAINS.include?(email.split('@').last)
       raise_error(InvalidDomainErr)
     end
 

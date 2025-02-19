@@ -22,51 +22,99 @@ RSpec.describe 'ReeMapper::Array' do
     }
   }
 
+  class EnumerableArray
+    include Enumerable
+
+    def initialize
+      @list = []
+    end
+
+    def each(&proc)
+      @list.each &proc
+    end
+
+    def add(v)
+      @list << v
+    end
+  end
+
   describe '#serialize' do
+    it {
+      ar = EnumerableArray.new
+      ar.add(1)
+      ar.add(2)
+
+      expect(mapper.serialize({ tags: ar, ary_of_ary: [[1]] })).to eq({ tags: [1, 2], ary_of_ary: [[1]] })
+    }
+
     it {
       expect(mapper.serialize({ tags: [1, 2], ary_of_ary: [[1]] })).to eq({ tags: [1, 2], ary_of_ary: [[1]] })
     }
 
     it {
-      expect { mapper.serialize({ tags: 1 }) }.to raise_error(ReeMapper::TypeError, "`tags` should be an array")
+      expect { mapper.serialize({ tags: 1 }) }.to raise_error(ReeMapper::TypeError, /`tags` should be an array, got `1`/)
     }
 
     it {
-      expect { mapper.serialize({tags: [1], ary_of_ary: ["1"] }) }.to raise_error(ReeMapper::TypeError, "`ary_of_ary[0]` should be an array")
+      expect { mapper.serialize({tags: [1], ary_of_ary: ["1"] }) }.to raise_error(ReeMapper::TypeError, /`ary_of_ary\[0\]` should be an array, got `\"1\"`/)
     }
 
     it {
-      expect { mapper.serialize({tags: [1], ary_of_ary: [[1, "1"]] }) }.to raise_error(ReeMapper::TypeError, "`ary_of_ary[0][1]` should be an integer")
+      expect { mapper.serialize({tags: [1], ary_of_ary: [[1, "1"]] }) }.to raise_error(ReeMapper::TypeError, /`ary_of_ary\[0\]\[1\]` should be an integer, got `\"1\"`/)
     }
   end
 
   describe '#cast' do
     it {
+      ar = EnumerableArray.new
+      ar.add(1)
+      ar.add(2)
+
+      expect(mapper.cast({ 'tags' => ar })).to eq({ tags: [1, 2] })
+    }
+
+    it {
       expect(mapper.cast({ 'tags' => [1, 2] })).to eq({ tags: [1, 2] })
     }
 
     it {
-      expect { mapper.cast({ 'tags' => 1 }) }.to raise_error(ReeMapper::TypeError, "`tags` should be an array")
+      expect { mapper.cast({ 'tags' => 1 }) }.to raise_error(ReeMapper::TypeError, /`tags` should be an array, got `1`/)
     }
   end
 
   describe '#db_dump' do
     it {
+      ar = EnumerableArray.new
+      ar.add(1)
+      ar.add(2)
+
+      expect(mapper.db_dump(OpenStruct.new({ tags: ar }))).to eq({ tags: [1, 2] })
+    }
+
+    it {
       expect(mapper.db_dump(OpenStruct.new({ tags: [1, 2] }))).to eq({ tags: [1, 2] })
     }
 
     it {
-      expect { mapper.db_dump(OpenStruct.new({ tags: 1 })) }.to raise_error(ReeMapper::TypeError, "`tags` should be an array")
+      expect { mapper.db_dump(OpenStruct.new({ tags: 1 })) }.to raise_error(ReeMapper::TypeError, /`tags` should be an array, got `1`/)
     }
   end
 
   describe '#db_load' do
     it {
+      ar = EnumerableArray.new
+      ar.add(1)
+      ar.add(2)
+
+      expect(mapper.db_load({ 'tags' => ar })).to eq({ tags: [1, 2] })
+    }
+
+    it {
       expect(mapper.db_load({ 'tags' => [1, 2] })).to eq({ tags: [1, 2] })
     }
 
     it {
-      expect { mapper.db_load({ 'tags' => 1 }) }.to raise_error(ReeMapper::TypeError, "`tags` should be an array")
+      expect { mapper.db_load({ 'tags' => 1 }) }.to raise_error(ReeMapper::TypeError, /`tags` should be an array, got `1`/)
     }
   end
 
