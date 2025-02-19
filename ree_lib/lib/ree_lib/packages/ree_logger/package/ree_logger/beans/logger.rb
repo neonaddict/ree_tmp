@@ -15,6 +15,7 @@ class ReeLogger::Logger
     link 'ree_logger/appenders/file_appender', -> { FileAppender }
     link 'ree_logger/appenders/stdout_appender', -> { StdoutAppender }
     link 'ree_logger/appenders/rollbar_appender', -> { RollbarAppender }
+    link 'ree_logger/appenders/sentry_appender', -> { SentryAppender }
   end
 
   def build
@@ -46,6 +47,14 @@ class ReeLogger::Logger
         access_token: config.rollbar.access_token,
         environment: config.rollbar.environment,
         **opts
+      )
+    end
+
+    if config.sentry.enabled
+      appenders << SentryAppender.new(
+        config.levels.sentry,
+        dsn: config.sentry.dsn,
+        environment: config.sentry.environment
       )
     end
 

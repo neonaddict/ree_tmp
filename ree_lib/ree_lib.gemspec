@@ -45,5 +45,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'warden', "~> 1.2.9"
   spec.add_development_dependency 'timecop', "~> 0.9.5"
   spec.add_development_dependency "rollbar", "~> 3.5.1"
+  spec.add_development_dependency "sentry-ruby", "~> 5.22.4"
   spec.add_development_dependency "faker", "~> 3.2"
 end
