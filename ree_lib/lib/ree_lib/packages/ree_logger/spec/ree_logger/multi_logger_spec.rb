@@ -1,10 +1,12 @@
 #frozen_string_literal: true
 
 require 'rollbar'
+require 'sentry-ruby'
 package_require('ree_logger/multi_logger')
 package_require('ree_logger/appenders/stdout_appender')
 package_require('ree_logger/appenders/file_appender')
 package_require('ree_logger/appenders/rollbar_appender')
+package_require('ree_logger/appenders/sentry_appender')
 
 RSpec.describe ReeLogger::MultiLogger do
   link :is_blank, from: :ree_object
@@ -47,6 +49,14 @@ RSpec.describe ReeLogger::MultiLogger do
     )
   }
 
+  let(:sentry_appender) {
+    ReeLogger::SentryAppender.new(
+      :info,
+      dsn: ENV['LOG_SENTRY_DSN'],
+      environment: ENV['LOG_SENTRY_ENVIRONMENT']
+    )
+  }
+
   let(:logger) {
     multi_logger.new(
       'SomeCoolApp',
@@ -56,13 +66,14 @@ RSpec.describe ReeLogger::MultiLogger do
   }
 
   let(:logger_with_appenders) {
-    [file_appender, stdout_appender, rollbar_appender].map { logger.add_appender(_1) }
+    [file_appender, stdout_appender, rollbar_appender, sentry_appender].map { logger.add_appender(_1) }
 
     logger
   }
 
   before(:each) do
     allow(Rollbar).to receive(:log)
+    allow(Sentry).to receive(:capture_message)
   end
 
   it {
@@ -72,24 +83,28 @@ RSpec.describe ReeLogger::MultiLogger do
   it {
     expect { logger.info('any message') }.to_not output(/any message/).to_stdout
     expect(Rollbar).not_to have_received(:log)
+    expect(Sentry).not_to have_received(:capture_message)
     expect(File.read(log_file_path)).to_not match('any message')
   }
 
   it {
     expect { logger_with_appenders.info('hello world') }.to output(/hello world/).to_stdout
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("hello world")
   }
 
   it {
     expect { logger_with_appenders.info {'block message'} }.to output(/block message/).to_stdout
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("block message")
   }
 
   it {
     expect { logger_with_appenders.info('hello world', { param: 1, another_param: { name: 'John'}, password: 'password01' }) }.to output(/John/).to_stdout
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("John")
     expected = if RUBY_VERSION >= '3.4'
       'password: "FILTERED"'
@@ -102,12 +117,14 @@ RSpec.describe ReeLogger::MultiLogger do
   it {
     expect { logger_with_appenders.debug('debug message') }.to_not output(/debug message/).to_stdout
     expect(Rollbar).not_to have_received(:log)
+    expect(Sentry).not_to have_received(:capture_message)
     expect(File.read(log_file_path)).to_not match("debug")
   }
 
   it {
     expect { logger_with_appenders.warn('warning message') }.to output(/warning message/).to_stdout
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("warning message")
   }
 
@@ -119,12 +136,14 @@ RSpec.describe ReeLogger::MultiLogger do
     expect(output).to_not match(/method|args/)
     expect(File.read(log_file_path)).to match("some error message")
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to_not match("PARAMETERS: {:method=>{:name=>:call, :args=>{:block=>{}}}}")
   }
 
   it {
     expect { logger_with_appenders.fatal('some fatal message', { email: 'some@mail.com', password: 'password01' }, exception) }.to output(/some fatal message/).to_stdout
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("some fatal message")
     expected = if RUBY_VERSION >= '3.4'
       'password: "FILTERED"'
@@ -137,6 +156,7 @@ RSpec.describe ReeLogger::MultiLogger do
   it {
     expect { logger_with_appenders.unknown('unknown message') }.to output(/unknown message/).to_stdout
     expect(Rollbar).to have_received(:log)
+    expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("unknown message")
   }
 

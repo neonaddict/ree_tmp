@@ -18,6 +18,7 @@ class ReeLogger::Config
 
   def build
     is_rollbar_enabled = parse_bool_string(ENV['LOG_ROLLBAR_ENABLED'])
+    is_sentry_enabled = parse_bool_string(ENV['LOG_SENTRY_ENABLED'])
 
     to_obj({
       file_path: ENV['LOG_FILE_PATH'],
@@ -26,6 +27,7 @@ class ReeLogger::Config
         file: parse_level(ENV['LOG_LEVEL_FILE']),
         stdout: parse_level(ENV['LOG_LEVEL_STDOUT']),
         rollbar: is_rollbar_enabled ? parse_level(ENV['LOG_LEVEL_ROLLBAR']) : nil,
+        sentry: is_sentry_enabled ? parse_level(ENV['LOG_LEVEL_SENTRY']) : nil,
       },
       rollbar: {
         enabled: is_rollbar_enabled,
@@ -33,6 +35,11 @@ class ReeLogger::Config
         environment: is_rollbar_enabled ? ENV.fetch('LOG_ROLLBAR_ENVIRONMENT') : nil,
         branch: ENV['LOG_ROLLBAR_BRANCH'],
         host: ENV['LOG_ROLLBAR_HOST']
+      },
+      sentry: {
+        enabled: is_sentry_enabled,
+        dsn: is_sentry_enabled ? ENV.fetch('LOG_SENTRY_DSN') : nil,
+        environment: is_sentry_enabled ? ENV.fetch('LOG_SENTRY_ENVIRONMENT') : nil,
       },
       rate_limit: {
         interval: get_int_value('LOG_RATE_LIMIT_INTERVAL', RATE_LIMIT_INTERVAL),
