@@ -106,7 +106,12 @@ RSpec.describe ReeLogger::MultiLogger do
     expect(Rollbar).to have_received(:log)
     expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("John")
-    expect(File.read(log_file_path)).to match(":password=>\"FILTERED\"")
+    expected = if RUBY_VERSION >= '3.4'
+      'password: "FILTERED"'
+    else
+      ':password=>"FILTERED"'
+    end
+    expect(File.read(log_file_path)).to match(expected)
   }
 
   it {
@@ -140,7 +145,12 @@ RSpec.describe ReeLogger::MultiLogger do
     expect(Rollbar).to have_received(:log)
     expect(Sentry).to have_received(:capture_message)
     expect(File.read(log_file_path)).to match("some fatal message")
-    expect(File.read(log_file_path)).to match(":password=>\"FILTERED\"")
+    expected = if RUBY_VERSION >= '3.4'
+      'password: "FILTERED"'
+    else
+      ':password=>"FILTERED"'
+    end
+    expect(File.read(log_file_path)).to match(expected)
   }
 
   it {
