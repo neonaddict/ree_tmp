@@ -78,9 +78,6 @@ GEM
       rspec-support (~> 3.13.0)
     rspec-support (3.13.1)
     ruby-prof (1.7.0)
-    sentry-ruby (5.22.4)
-      bigdecimal
-      concurrent-ruby (~> 1.0, >= 1.0.2)
     sequel (5.88.0)
       bigdecimal
     sqlite3 (2.5.0-x86_64-darwin)
@@ -114,7 +111,6 @@ DEPENDENCIES
   rollbar (~> 3.6.0)
   rspec
   ruby-prof
-  sentry-ruby (~> 5.22.4)
   sqlite3 (~> 2.5.0)
   timecop (~> 0.9.10)
   warden (~> 1.2.9)
